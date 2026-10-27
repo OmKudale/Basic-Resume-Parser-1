@@ -14,7 +14,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {matchData ? (
-        <MatchResults match={matchData.match} />
+        <MatchResults match={matchData.match} onReset={() => setMatchData(null)} />
       ) : (
         <ResumeUploadForm onSubmit={handleSubmit} />
       )}
