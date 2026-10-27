@@ -1,29 +1,55 @@
-const MatchResults = ({ match }) => {
-  const { score, matchedSkills, missingSkills, strengths, weaknesses, explanation, eligible } = match;
+const MatchResults = ({ match = {}, onReset }) => {
+  const {
+    score = 0,
+    matchedSkills = [],
+    missingSkills = [],
+    strengths = [],
+    weaknesses = [],
+    explanation = '',
+    eligible = false,
+  } = match || {};
 
-  // Ensure score is a number and handle potential undefined/null
-  const numericScore = typeof score === 'number' ? score : 0;
+  // Ensure score is a number between 0 and 100
+  const parsedScore = typeof score === 'number' ? score : (parseInt(score, 10) || 0);
+  const numericScore = Math.max(0, Math.min(100, Math.round(parsedScore)));
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
+  const getScoreColor = (s) => {
+    if (s >= 80) return 'text-green-600';
+    if (s >= 70) return 'text-yellow-600';
     return 'text-red-600';
   };
 
-  const getStrokeColor = (score) => {
-    if (score >= 80) return 'stroke-green-500';
-    if (score >= 70) return 'stroke-yellow-500';
+  const getStrokeColor = (s) => {
+    if (s >= 80) return 'stroke-green-500';
+    if (s >= 70) return 'stroke-yellow-500';
     return 'stroke-red-500';
   };
 
+  const circumference = 440;
+  const strokeDashoffset = circumference - (circumference * numericScore) / 100;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+    <div className="min-h-screen bg-linear-to-br from-indigo-50 to-white">
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-indigo-100">
           <div className="p-8">
-            <h2 className="text-3xl font-extrabold text-center text-gray-900 mb-10">
-              Resume Analysis Results
-            </h2>
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+              <h2 className="text-3xl font-extrabold text-gray-900">
+                Resume Analysis Results
+              </h2>
+              {onReset && (
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Upload Another Resume
+                </button>
+              )}
+            </div>
 
             {/* Score Card */}
             <div className="mb-10 flex flex-col items-center">
@@ -41,8 +67,8 @@ const MatchResults = ({ match }) => {
                   <circle
                     className={`${getStrokeColor(numericScore)} transition-all duration-1000 ease-out`}
                     strokeWidth="10"
-                    strokeDasharray={440}
-                    strokeDashoffset={440 - (440 * numericScore) / 100}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
                     stroke="currentColor"
                     fill="transparent"
@@ -51,7 +77,7 @@ const MatchResults = ({ match }) => {
                     cy="80"
                   />
                 </svg>
-                <div className="absolute text-3xl font-bold text-gray-900">
+                <div className={`absolute text-3xl font-bold ${getScoreColor(numericScore)}`}>
                   {numericScore}%
                 </div>
               </div>
@@ -70,7 +96,7 @@ const MatchResults = ({ match }) => {
                 <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center">
                   <span className="mr-2 text-2xl">✓</span> Matched Skills
                 </h3>
-                {matchedSkills?.length > 0 ? (
+                {matchedSkills && matchedSkills.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {matchedSkills.map((skill, index) => (
                       <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
@@ -88,7 +114,7 @@ const MatchResults = ({ match }) => {
                 <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center">
                   <span className="mr-2 text-2xl">⚠️</span> Skills to Develop
                 </h3>
-                {missingSkills?.length > 0 ? (
+                {missingSkills && missingSkills.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {missingSkills.map((skill, index) => (
                       <span key={index} className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
@@ -109,7 +135,7 @@ const MatchResults = ({ match }) => {
                 <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center">
                   <span className="mr-2 text-2xl">💪</span> Strengths
                 </h3>
-                {strengths?.length > 0 ? (
+                {strengths && strengths.length > 0 ? (
                   <ul className="space-y-2 list-disc list-inside text-blue-900">
                     {strengths.map((strength, index) => <li key={index}>{strength}</li>)}
                   </ul>
@@ -121,7 +147,7 @@ const MatchResults = ({ match }) => {
                 <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center">
                   <span className="mr-2 text-2xl">📈</span> Areas for Growth
                 </h3>
-                {weaknesses?.length > 0 ? (
+                {weaknesses && weaknesses.length > 0 ? (
                   <ul className="space-y-2 list-disc list-inside text-amber-950">
                     {weaknesses.map((weakness, index) => <li key={index}>{weakness}</li>)}
                   </ul>
@@ -134,8 +160,21 @@ const MatchResults = ({ match }) => {
               <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
                 <span className="mr-2 text-2xl">📝</span> Analysis Summary
               </h3>
-              <p className="text-gray-700 leading-relaxed">{explanation}</p>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">{explanation || 'No detailed explanation provided.'}</p>
             </div>
+
+            {/* Bottom Actions */}
+            {onReset && (
+              <div className="mt-8 pt-6 border-t border-gray-100 flex justify-center">
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="px-6 py-3 font-semibold text-white bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl transition-all shadow-md hover:shadow-lg cursor-pointer"
+                >
+                  Analyze Another Resume
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,30 +1,55 @@
 import os
+import re
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 from groq import Groq
-from pydantic import BaseModel,Field
+from pydantic import BaseModel, Field
 from pypdf import PdfReader
 from tkinter import Tk, filedialog
 from typing import List, Optional
 
-
+# Load environment variables (checking both root and server directory)
 load_dotenv()
+if not os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY") == "your_key_here":
+    server_env = Path(__file__).parent / "server" / ".env"
+    if server_env.exists():
+        load_dotenv(server_env)
 
 my_api_key = os.getenv("GROQ_API_KEY")
 
-if not my_api_key:
-    raise ValueError("Api key not found")
+if not my_api_key or my_api_key == "your_key_here":
+    raise ValueError("GROQ_API_KEY not found. Please set your Groq API key in .env or server/.env")
 
 client = Groq(api_key=my_api_key)
-role="user"
-model ="openai/gpt-oss-120b"
+role = "user"
+model = "openai/gpt-oss-120b"
 
-Tk().withdraw()
+def extract_json(text: str) -> dict:
+    text = (text or "").strip()
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+    cleaned = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
+    cleaned = re.sub(r"```\s*$", "", cleaned, flags=re.MULTILINE).strip()
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+    match = re.search(r"\{[\s\S]*\}", text)
+    if match:
+        return json.loads(match.group(0))
+    raise ValueError("Could not extract valid JSON from LLM response")
+
+root = Tk()
+root.withdraw()
 
 file_path = filedialog.askopenfilename(
     title="Select Resume",
     filetypes=[("PDF Files", "*.pdf")]
 )
+root.destroy()
 
 if not file_path:
     raise ValueError("No file selected")
@@ -93,11 +118,7 @@ response = client.chat.completions.create(model=model,messages=messages,response
 answer = response.choices[0].message.content
 
 
-import json
-
-raw_data = answer
-
-data = json.loads(raw_data)
+data = extract_json(answer)
 
 resume_content = Resume(**data)
 
@@ -234,17 +255,15 @@ match_response = client.chat.completions.create(model=model,messages=match_messa
 
 match_answer = match_response.choices[0].message.content
 
-raw_data2 = match_answer
-
-data_files = json.loads(raw_data2)
+data_files = extract_json(match_answer)
 
 match_res = ResumeMatch(**data_files)
 
-print("your score:",match_res.score)
+print("Your Score:", match_res.score)
 
 print()
 
-print("summery:",match_res.explanation)
+print("Summary:", match_res.explanation)
 
 print()
 

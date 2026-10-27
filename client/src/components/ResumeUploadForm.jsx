@@ -33,7 +33,8 @@ const ResumeUploadForm = ({ onSubmit }) => {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      if (file.type === 'application/pdf') {
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
         setResume(file);
         setError(null);
       } else {
@@ -44,8 +45,14 @@ const ResumeUploadForm = ({ onSubmit }) => {
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      setResume(e.target.files[0]);
-      setError(null);
+      const file = e.target.files[0];
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        setResume(file);
+        setError(null);
+      } else {
+        setError('Please upload a valid PDF file.');
+      }
     }
   };
 
@@ -83,15 +90,29 @@ const ResumeUploadForm = ({ onSubmit }) => {
         body: formData,
       });
 
-      const data = await response.json();
+      let data;
+      const responseText = await response.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          response.ok
+            ? 'Invalid server response'
+            : `Server error (${response.status}): Could not connect to backend server. Make sure the server is running on port 5000.`
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Upload failed');
+        throw new Error(data.message || data.error || `Upload failed (${response.status})`);
+      }
+
+      if (!data.data || !data.data.match) {
+        throw new Error('Received unexpected response format from server');
       }
 
       onSubmit(data.data);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -199,11 +220,11 @@ const ResumeUploadForm = ({ onSubmit }) => {
           </div>
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-pulse">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
               <svg className="w-5 h-5 text-red-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-sm font-medium text-red-800">{error}</p>
+              <p className="text-sm font-medium text-red-800 break-words">{error}</p>
             </div>
           )}
 
